@@ -16,6 +16,8 @@ func SetupController(route *mux.Route) {
 	router.HandleFunc("/", SetUserInfo).Methods("POST")
 	router.HandleFunc("/filter/", GetFilteredUserInfo).Methods("GET")
 
+	router.HandleFunc("/batch/", SetBatchUserInfo).Methods("POST")
+
 	router.HandleFunc("/qr/", GetCurrentQrCodeInfo).Methods("GET")
 	router.HandleFunc("/qr/{id}/", GetQrCodeInfo).Methods("GET")
 
@@ -82,6 +84,58 @@ func GetFilteredUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(user_info)
+}
+
+/* 
+	Endpoint to batch set info for multiple specified users
+*/
+func SetBatchUserInfo(w http.ResponseWriter, r *http.Request) {
+
+	type BatchUserStruct struct {
+		UsersInfo []models.UserInfo `json:"users"`
+	}
+
+	var batchUserInfo BatchUserStruct
+
+	var users_info []models.UserInfo
+
+	json.NewDecoder(r.Body).Decode(&batchUserInfo)
+
+	users_info = batchUserInfo.UsersInfo
+
+	if len(users_info) == 0 {
+		errors.WriteError(w, r, errors.MalformedRequestError("No users provided.", "No users provided."))
+		return
+	}
+
+	var new_users_info []models.UserInfo
+
+	for i := 0; i < len(users_info); i++ {
+		var user_info = users_info[i]
+
+		if user_info.ID == "" {
+			errors.WriteError(w, r, errors.MalformedRequestError("Must provide user id in request.", "Must provide user id in request."))
+			return
+		}
+	
+		err := service.SetUserInfo(user_info.ID, user_info)
+	
+		if err != nil {
+			errors.WriteError(w, r, errors.DatabaseError(err.Error(), "Could not upsert user info."))
+			return
+		}
+	
+		updated_info, err := service.GetUserInfo(user_info.ID)
+	
+		if err != nil {
+			errors.WriteError(w, r, errors.DatabaseError(err.Error(), "Could not fetch user info by ID."))
+			return
+		}
+
+		new_users_info = append(new_users_info, *updated_info)
+	}
+
+	json.NewEncoder(w).Encode(new_users_info)
 }
 
 /*

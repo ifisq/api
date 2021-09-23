@@ -25,6 +25,12 @@ var UserRoutes = arbor.RouteCollection{
 		alice.New(middleware.AuthMiddleware([]models.Role{models.AdminRole}), middleware.IdentificationMiddleware).ThenFunc(SetUserInfo).ServeHTTP,
 	},
 	arbor.Route{
+		"SetBatchUserInfo",
+		"POST",
+		"/user/batch/",
+		alice.New(middleware.AuthMiddleware([]models.Role{models.AdminRole}), middleware.IdentificationMiddleware).ThenFunc(SetBatchUserInfo).ServeHTTP,
+	},
+	arbor.Route{
 		"GetCurrentQrCodeInfo",
 		"GET",
 		"/user/qr/",
@@ -55,6 +61,10 @@ func GetUserInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func SetUserInfo(w http.ResponseWriter, r *http.Request) {
+	arbor.POST(w, config.USER_SERVICE+r.URL.String(), UserFormat, "", r)
+}
+
+func SetBatchUserInfo(w http.ResponseWriter, r *http.Request) {
 	arbor.POST(w, config.USER_SERVICE+r.URL.String(), UserFormat, "", r)
 }
 
